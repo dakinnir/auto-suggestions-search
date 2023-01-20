@@ -4,51 +4,51 @@ import { useState, useEffect } from "react";
 import MovieCard from "./component/movie.component";
 
 import { apiKey } from "./utils/secrets";
+import { useDebounce } from "./hooks/debounce/useDebounce";
 
 function App() {
   console.log("render");
   // movies data to search through
   const [moviesData, setMoviesData] = useState([]);
+  console.log(13)
   // query search
   const [search, setSearch] = useState("");
+  console.log(16)
+
   const [suggestions, setSuggestions] = useState(moviesData);
+  console.log(19)
+
+  const debouncedValue = useDebounce(search, 300);
+  console.log(21)
 
   const url = "https://api.themoviedb.org/3/trending/movie/week";
-  const apiKey = process.env.REACT_APP_API_KEY
+
+  const fetchData = async () => {
+    const response = await fetch(`${url}?api_key=${apiKey}`);
+    const data = await response.json();
+    const arrayObject = data.results;
+    return arrayObject;
+  };
+
   useEffect(() => {
-    fetch(
-      console.log(apiKey)
-      `${url}?api_key=${apiKey}`
-    )
-      .then((data) => data.json())
-      .then((pageObject) => {
-         return pageObject.results
-      })
-      .then((movies) => {
-        setMoviesData(movies)
-      })
-      // .then(moviess => console.log(moviess))
+    fetchData().then((movies) => {
+      setMoviesData(movies);
+    });
   }, []);
+
   // update the search results depending on when the search changes
   useEffect(() => {
     setSuggestions(
       moviesData.filter((movie) => {
-        return movie.title.includes(search);
+        return movie.title.toLowerCase().includes(debouncedValue.toLowerCase());
       })
     );
-  }, [search, moviesData]);
+  }, [debouncedValue, moviesData]);
 
   const onSearchHandler = (event) => {
     const value = event.target.value;
-    if (value.length === 0) {
-      setMessage("Start searching");
-    } else if (!suggestions === 0) {
-      setMessage("No suggested movies matching the search.");
-    }
     setSearch(value);
   };
-
-  const [message, setMessage] = useState("Start searching");
 
   return (
     <div className="App">
@@ -64,10 +64,9 @@ function App() {
       <div className="suggestions-container">
         {suggestions &&
           suggestions.map((movie) => {
-            return <MovieCard key={movie.id} movie={movie}/>
+            return <MovieCard key={movie.id} movie={movie} />;
           })}
       </div>
-      {!suggestions && <p>{message}</p>}
     </div>
   );
 }
